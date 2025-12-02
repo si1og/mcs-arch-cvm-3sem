@@ -1,0 +1,258 @@
+\section*{Синтез недвоичного вычитающего счётчика с коэффициентом пересчёта $K_{сч} = 5$}
+
+\subsection*{Цель работы}
+Изучить принципы синтеза последовательностных схем на примере проектирования недвоичного вычитающего счётчика с использованием J-K триггеров и карт Карно для минимизации логических функций.
+
+\subsection*{1. Определение числа триггеров}
+
+Количество триггеров $m$, необходимое для построения счётчика с $M$ состояниями, определяется соотношением:
+\[
+m \geq \lceil \log_2 M \rceil
+\]
+
+Для $M = 5$:
+\[
+m \geq \lceil \log_2 5 \rceil = \lceil 2.322 \rceil = 3
+\]
+
+Таким образом, для построения счётчика понадобится \textbf{3 триггера} ($Q_1$, $Q_2$, $Q_3$).
+
+Число избыточных состояний:
+\[
+N = 2^m - M = 2^3 - 5 = 3
+\]
+
+\subsection*{2. Таблица функционирования счётчика}
+
+Вычитающий счётчик работает в последовательности: $4 \to 3 \to 2 \to 1 \to 0 \to 4 \to \ldots$
+
+Используем естественное двоичное кодирование состояний, где $Q_1$ --- старший разряд, $Q_3$ --- младший разряд.
+
+\begin{table}[h]
+\centering
+\caption{Таблица переходов вычитающего счётчика ($M = 5$)}
+\begin{tabular}{|c|ccc|ccc|}
+\hline
+\multirow{2}{*}{№ сост.} & \multicolumn{3}{c|}{Состояние $t$} & \multicolumn{3}{c|}{Состояние $t+1$} \\
+ & $Q_1$ & $Q_2$ & $Q_3$ & $Q_1^{t+1}$ & $Q_2^{t+1}$ & $Q_3^{t+1}$ \\
+\hline
+4 & 1 & 0 & 0 & 0 & 1 & 1 \\
+3 & 0 & 1 & 1 & 0 & 1 & 0 \\
+2 & 0 & 1 & 0 & 0 & 0 & 1 \\
+1 & 0 & 0 & 1 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+\hline
+5* & 1 & 0 & 1 & --- & --- & --- \\
+6* & 1 & 1 & 0 & --- & --- & --- \\
+7* & 1 & 1 & 1 & --- & --- & --- \\
+\hline
+\end{tabular}
+\end{table}
+
+Состояния 5, 6, 7 являются избыточными и в нормальном режиме работы не используются.
+
+\subsection*{3. Характеристическая таблица J-K триггера}
+
+\begin{table}[h]
+\centering
+\caption{Характеристическая таблица J-K триггера}
+\begin{tabular}{|c|c|c|}
+\hline
+Переход $Q^t \to Q^{t+1}$ & $J$ & $K$ \\
+\hline
+$0 \to 0$ & 0 & * \\
+$0 \to 1$ & 1 & * \\
+$1 \to 0$ & * & 1 \\
+$1 \to 1$ & * & 0 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection*{4. Прикладные таблицы (карты Карно переходов)}
+
+В ячейках записаны двузначные коды $Q_i^t Q_i^{t+1}$, показывающие переход триггера из текущего состояния в следующее. Прочерк <<-->> означает избыточное состояние.
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & \multicolumn{2}{c|}{$Q_2$} & \multicolumn{2}{c|}{$\overline{Q_2}$} \\
+\hline
+$Q_3$ & 01 & --- & --- & 00 \\
+\hline
+$\overline{Q_3}$ & 00 & --- & 10 & 00 \\
+\hline
+ & $\overline{Q_1}$ & $Q_1$ & $Q_1$ & $\overline{Q_1}$ \\
+\hline
+\end{tabular}
+
+Таблица 2. $Q_1(t) \to Q_1(t+1)$
+\end{center}
+
+\vspace{0.5cm}
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & \multicolumn{2}{c|}{$Q_2$} & \multicolumn{2}{c|}{$\overline{Q_2}$} \\
+\hline
+$Q_3$ & 10 & --- & --- & 01 \\
+\hline
+$\overline{Q_3}$ & 11 & --- & 00 & 00 \\
+\hline
+ & $\overline{Q_1}$ & $Q_1$ & $Q_1$ & $\overline{Q_1}$ \\
+\hline
+\end{tabular}
+
+Таблица 3. $Q_2(t) \to Q_2(t+1)$
+\end{center}
+
+\vspace{0.5cm}
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & \multicolumn{2}{c|}{$Q_2$} & \multicolumn{2}{c|}{$\overline{Q_2}$} \\
+\hline
+$Q_3$ & 10 & --- & --- & 10 \\
+\hline
+$\overline{Q_3}$ & 01 & --- & 00 & 01 \\
+\hline
+ & $\overline{Q_1}$ & $Q_1$ & $Q_1$ & $\overline{Q_1}$ \\
+\hline
+\end{tabular}
+
+Таблица 4. $Q_3(t) \to Q_3(t+1)$
+\end{center}
+
+\subsection*{5. Карты Карно для входов J и K триггеров}
+
+На основе составленных прикладных таблиц и характеристической таблицы J-K триггера составим карты Карно для входов $J$ и $K$ каждого триггера.
+
+\subsubsection*{5.1. Карты Карно для триггера $Q_1$}
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & \multicolumn{2}{c|}{$Q_2$} & \multicolumn{2}{c|}{$\overline{Q_2}$} \\
+\hline
+$Q_3$ & 0 & --- & --- & 0 \\
+\hline
+$\overline{Q_3}$ & 0 & --- & * & 1 \\
+\hline
+ & $\overline{Q_1}$ & $Q_1$ & $Q_1$ & $\overline{Q_1}$ \\
+\hline
+\end{tabular}
+
+Таблица 5. $J_1$
+\end{center}
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & \multicolumn{2}{c|}{$Q_2$} & \multicolumn{2}{c|}{$\overline{Q_2}$} \\
+\hline
+$Q_3$ & * & --- & --- & * \\
+\hline
+$\overline{Q_3}$ & * & --- & 1 & * \\
+\hline
+ & $\overline{Q_1}$ & $Q_1$ & $Q_1$ & $\overline{Q_1}$ \\
+\hline
+\end{tabular}
+
+Таблица 6. $K_1$
+\end{center}
+
+\subsubsection*{5.2. Карты Карно для триггера $Q_2$}
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & \multicolumn{2}{c|}{$Q_2$} & \multicolumn{2}{c|}{$\overline{Q_2}$} \\
+\hline
+$Q_3$ & * & --- & --- & 1 \\
+\hline
+$\overline{Q_3}$ & * & --- & 0 & 0 \\
+\hline
+ & $\overline{Q_1}$ & $Q_1$ & $Q_1$ & $\overline{Q_1}$ \\
+\hline
+\end{tabular}
+
+Таблица 7. $J_2$
+\end{center}
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & \multicolumn{2}{c|}{$Q_2$} & \multicolumn{2}{c|}{$\overline{Q_2}$} \\
+\hline
+$Q_3$ & 1 & --- & --- & * \\
+\hline
+$\overline{Q_3}$ & 0 & --- & * & * \\
+\hline
+ & $\overline{Q_1}$ & $Q_1$ & $Q_1$ & $\overline{Q_1}$ \\
+\hline
+\end{tabular}
+
+Таблица 8. $K_2$
+\end{center}
+
+\subsubsection*{5.3. Карты Карно для триггера $Q_3$}
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & \multicolumn{2}{c|}{$Q_2$} & \multicolumn{2}{c|}{$\overline{Q_2}$} \\
+\hline
+$Q_3$ & * & --- & --- & * \\
+\hline
+$\overline{Q_3}$ & 1 & --- & 0 & 1 \\
+\hline
+ & $\overline{Q_1}$ & $Q_1$ & $Q_1$ & $\overline{Q_1}$ \\
+\hline
+\end{tabular}
+
+Таблица 9. $J_3$
+\end{center}
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & \multicolumn{2}{c|}{$Q_2$} & \multicolumn{2}{c|}{$\overline{Q_2}$} \\
+\hline
+$Q_3$ & 1 & --- & --- & 1 \\
+\hline
+$\overline{Q_3}$ & * & --- & * & * \\
+\hline
+ & $\overline{Q_1}$ & $Q_1$ & $Q_1$ & $\overline{Q_1}$ \\
+\hline
+\end{tabular}
+
+Таблица 10. $K_3$
+\end{center}
+
+\subsection*{6. Минимизация и логические уравнения}
+
+Из полученных карт Карно составляем логические уравнения для входов триггеров:
+
+\begin{align*}
+J_1 &= \overline{Q_2} \cdot \overline{Q_3} & K_1 &= 1 \\[0.3cm]
+J_2 &= Q_1 & K_2 &= \overline{Q_3} \\[0.3cm]
+J_3 &= Q_1 + Q_2 & K_3 &= 1
+\end{align*}
+
+\subsection*{7. Описание схемы счётчика}
+
+На основе полученных уравнений строится схема, состоящая из:
+
+\begin{itemize}
+    \item Трёх J-K триггеров ($Q_1$, $Q_2$, $Q_3$)
+    \item Общего тактового входа $C$, подключённого ко всем триггерам
+    \item Логических элементов:
+    \begin{itemize}
+        \item Элемент 2И для формирования $J_1 = \overline{Q_2} \cdot \overline{Q_3}$ (используя инверсные выходы триггеров)
+        \item Элемент 2ИЛИ для формирования $J_3 = Q_1 + Q_2$
+    \end{itemize}
+    \item Входы $K_1$ и $K_3$ подключены к логической <<1>>
+    \item Вход $J_2$ подключён напрямую к выходу $Q_1$
+    \item Вход $K_2$ подключён к инверсному выходу $\overline{Q_3}$
+\end{itemize}
