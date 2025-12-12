@@ -1,0 +1,544 @@
+\section{Цель работы}
+
+Познакомиться с системой процессорных команд x86 в 32-битном режиме и способами использования этих команд. Изучить способы адресации, кодирование команд и организацию доступа к переменным в памяти.
+
+\section{Методика выполнения работы}
+
+\begin{enumerate}
+    \item Взять фрагмент программы на языке Си согласно варианту задания
+    \item Оттранслировать программу с в 32-битном режиме без оптимизаций
+    \item Получить дизассемблированный код функции \texttt{main}
+    \item Проанализировать соответствие инструкций Си и ассемблерного кода
+    \item Заменить обращение к элементам массива через индекс на обращение через указатель
+    \item Сравнить изменения в способах адресации
+\end{enumerate}
+
+\section{Исходный код программы}
+
+\subsection{Вариант с индексацией массива}
+
+\begin{lstlisting}[language=C, numbers=left, caption=Исходный код с индексацией массива]
+int cMas[10];
+unsigned long i;
+
+void main() {
+    for (i = 0; i < 9; i++) {
+        if (i != 6)
+            cMas[i] = (17 * i) & 0x0E;
+        else
+            cMas[i] = 0x1A * i / 4;
+    }
+}
+\end{lstlisting}
+
+Переменные \texttt{cMas} и \texttt{i} объявлены глобально.
+
+\section{Дизассемблированный код функции main}
+
+\begin{lstlisting}[language={[x86masm]Assembler}, numbers=left, caption=Дизассемблированный код функции main]
+0000118d <main>:
+    118d:   55                      push   ebp
+    118e:   89 e5                   mov    ebp,esp
+    1190:   e8 76 00 00 00          call   120b <__x86.get_pc_thunk.ax>
+    1195:   05 47 2e 00 00          add    eax,0x2e47
+    119a:   c7 80 8c 00 00 00 00    mov    DWORD PTR [eax+0x8c],0x0
+    11a1:   00 00 00 
+    11a4:   eb 56                   jmp    11fc <main+0x6f>
+    11a6:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    11ac:   83 fa 06                cmp    edx,0x6
+    11af:   74 21                   je     11d2 <main+0x45>
+    11b1:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    11b7:   89 d1                   mov    ecx,edx
+    11b9:   c1 e1 04                shl    ecx,0x4
+    11bc:   01 ca                   add    edx,ecx
+    11be:   89 d1                   mov    ecx,edx
+    11c0:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    11c6:   83 e1 0e                and    ecx,0xe
+    11c9:   89 8c 90 64 00 00 00    mov    DWORD PTR [eax+edx*4+0x64],ecx
+    11d0:   eb 1b                   jmp    11ed <main+0x60>
+    11d2:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    11d8:   6b d2 1a                imul   edx,edx,0x1a
+    11db:   89 d1                   mov    ecx,edx
+    11dd:   c1 e9 02                shr    ecx,0x2
+    11e0:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    11e6:   89 8c 90 64 00 00 00    mov    DWORD PTR [eax+edx*4+0x64],ecx
+    11ed:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    11f3:   83 c2 01                add    edx,0x1
+    11f6:   89 90 8c 00 00 00       mov    DWORD PTR [eax+0x8c],edx
+    11fc:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    1202:   83 fa 08                cmp    edx,0x8
+    1205:   76 9f                   jbe    11a6 <main+0x19>
+    1207:   90                      nop
+    1208:   90                      nop
+    1209:   5d                      pop    ebp
+    120a:   c3                      ret
+\end{lstlisting}
+
+\section{Разбор дизассемблера по байтам}
+
+Объяснение каждой инструкции для функции \texttt{main}:
+
+\begin{itemize}
+
+\item \textbf{0x0000118d} $<$+0$>$: \texttt{55 push ebp}\\
+\textbf{Байт-код:} 55\\
+Сохраняем указатель базы стека предыдущей функции.
+
+\item \textbf{0x0000118e} $<$+1$>$: \texttt{89 e5 mov ebp,esp}\\
+\textbf{Байт-код:} 89 e5\\
+Устанавливает \verb|ebp| на текущий верх стека (\verb|esp|), чтобы использовать ebp как базу для локальных переменных.
+
+\item \textbf{0x00001190} $<$+3$>$: \texttt{e8 76 00 00 00 call 0x120b <\_\_x86.get\_pc\_thunk.ax>}\\
+\textbf{Байт-код:} e8 76 00 00 00\\
+Сохраняет адрес следующей инструкции в регистре \verb|eax| (служебная вставка).
+
+\item \textbf{0x00001195} $<$+8$>$: \texttt{05 47 2e 00 00 add eax,0x2e47}\\
+\textbf{Байт-код:} 05 47 2e 00 00\\
+Добавляет смещение к \verb|eax| для вычисления адреса глобальных данных.
+
+\item \textbf{0x0000119a} $<$+13$>$: \texttt{c7 80 8c 00 00 00 00 00 00 00 mov DWORD PTR [eax+0x8c],0x0}\\
+\textbf{Байт-код:} c7 80 8c 00 00 00 00 00 00 00\\
+Инициализация переменной \texttt{i = 0} по адресу \verb|eax|+0x8c.
+
+\item \textbf{0x000011a4} $<$+23$>$: \texttt{eb 56 jmp 0x11fc <main+111>}\\
+\textbf{Байт-код:} eb 56\\
+Переход к проверке условия цикла.
+
+\item \textbf{0x000011a6} $<$+25$>$: \texttt{8b 90 8c 00 00 00 mov edx,DWORD PTR [eax+0x8c]}\\
+\textbf{Байт-код:} 8b 90 8c 00 00 00\\
+Загрузка значения переменной \texttt{i} в регистр \verb|edx|.
+
+\item \textbf{0x000011ac} $<$+31$>$: \texttt{83 fa 06 cmp edx,0x6}\\
+\textbf{Байт-код:} 83 fa 06\\
+Сравнение значения \texttt{i} с константой 6.
+
+\item \textbf{0x000011af} $<$+34$>$: \texttt{74 21 je 0x11d2 <main+69>}\\
+\textbf{Байт-код:} 74 21\\
+Условный переход на else-ветку, если \texttt{i == 6}.
+
+\item \textbf{0x000011b1} $<$+36$>$: \texttt{8b 90 8c 00 00 00 mov edx,DWORD PTR [eax+0x8c]}\\
+\textbf{Байт-код:} 8b 90 8c 00 00 00\\
+Повторная загрузка \texttt{i} в \verb|edx| для вычисления \texttt{17*i}.
+
+\item \textbf{0x000011b7} $<$+42$>$: \texttt{89 d1 mov ecx,edx}\\
+\textbf{Байт-код:} 89 d1\\
+Копирование значения \texttt{i} из \verb|edx| в \verb|ecx|.
+
+\item \textbf{0x000011b9} $<$+44$>$: \texttt{c1 e1 04 shl ecx,0x4}\\
+\textbf{Байт-код:} c1 e1 04\\
+Сдвиг \verb|ecx| влево на 4 бита: \texttt{ecx = i * 16}.
+
+\item \textbf{0x000011bc} $<$+47$>$: \texttt{01 ca add edx,ecx}\\
+\textbf{Байт-код:} 01 ca\\
+Сложение: \texttt{edx = i + i*16 = i*17}. Оптимизация умножения на 17.
+
+\item \textbf{0x000011be} $<$+49$>$: \texttt{89 d1 mov ecx,edx}\\
+\textbf{Байт-код:} 89 d1\\
+Копирование результата \texttt{i*17} в \verb|ecx|.
+
+\item \textbf{0x000011c0} $<$+51$>$: \texttt{8b 90 8c 00 00 00 mov edx,DWORD PTR [eax+0x8c]}\\
+\textbf{Байт-код:} 8b 90 8c 00 00 00\\
+Загрузка \texttt{i} в \verb|edx| для использования как индекса массива.
+
+\item \textbf{0x000011c6} $<$+57$>$: \texttt{83 e1 0e and ecx,0xe}\\
+\textbf{Байт-код:} 83 e1 0e\\
+Побитовое И: \texttt{ecx = (i*17) \& 0x0E}.
+
+\item \textbf{0x000011c9} $<$+60$>$: \texttt{89 8c 90 64 00 00 00 mov DWORD PTR [eax+edx*4+0x64],ecx}\\
+\textbf{Байт-код:} 89 8c 90 64 00 00 00\\
+Запись результата в \texttt{cMas[i]}. Многокомпонентная адресация: база \verb|eax| + индекс \verb|edx|*4 + смещение 0x64.
+
+\item \textbf{0x000011d0} $<$+67$>$: \texttt{eb 1b jmp 0x11ed <main+96>}\\
+\textbf{Байт-код:} eb 1b\\
+Безусловный переход к инкременту счётчика, минуя else-ветку.
+
+\item \textbf{0x000011d2} $<$+69$>$: \texttt{8b 90 8c 00 00 00 mov edx,DWORD PTR [eax+0x8c]}\\
+\textbf{Байт-код:} 8b 90 8c 00 00 00\\
+Начало else-ветки: загрузка \texttt{i} в \verb|edx|.
+
+\item \textbf{0x000011d8} $<$+75$>$: \texttt{6b d2 1a imul edx,edx,0x1a}\\
+\textbf{Байт-код:} 6b d2 1a\\
+Умножение: \texttt{edx = i * 26} (0x1A = 26).
+
+\item \textbf{0x000011db} $<$+78$>$: \texttt{89 d1 mov ecx,edx}\\
+\textbf{Байт-код:} 89 d1\\
+Копирование результата \texttt{i*26} в \verb|ecx|.
+
+\item \textbf{0x000011dd} $<$+80$>$: \texttt{c1 e9 02 shr ecx,0x2}\\
+\textbf{Байт-код:} c1 e9 02\\
+Сдвиг вправо на 2 бита: \texttt{ecx = (i*26) / 4}. Оптимизация деления на 4.
+
+\item \textbf{0x000011e0} $<$+83$>$: \texttt{8b 90 8c 00 00 00 mov edx,DWORD PTR [eax+0x8c]}\\
+\textbf{Байт-код:} 8b 90 8c 00 00 00\\
+Загрузка \texttt{i} в \verb|edx| для индексации массива.
+
+\item \textbf{0x000011e6} $<$+89$>$: \texttt{89 8c 90 64 00 00 00 mov DWORD PTR [eax+edx*4+0x64],ecx}\\
+\textbf{Байт-код:} 89 8c 90 64 00 00 00\\
+Запись результата в \texttt{cMas[i]}.
+
+\item \textbf{0x000011ed} $<$+96$>$: \texttt{8b 90 8c 00 00 00 mov edx,DWORD PTR [eax+0x8c]}\\
+\textbf{Байт-код:} 8b 90 8c 00 00 00\\
+Загрузка текущего значения \texttt{i} для инкремента.
+
+\item \textbf{0x000011f3} $<$+102$>$: \texttt{83 c2 01 add edx,0x1}\\
+\textbf{Байт-код:} 83 c2 01\\
+Инкремент: \texttt{edx = i + 1}.
+
+\item \textbf{0x000011f6} $<$+105$>$: \texttt{89 90 8c 00 00 00 mov DWORD PTR [eax+0x8c],edx}\\
+\textbf{Байт-код:} 89 90 8c 00 00 00\\
+Сохранение нового значения: \texttt{i = i + 1}.
+
+\item \textbf{0x000011fc} $<$+111$>$: \texttt{8b 90 8c 00 00 00 mov edx,DWORD PTR [eax+0x8c]}\\
+\textbf{Байт-код:} 8b 90 8c 00 00 00\\
+Загрузка \texttt{i} для проверки условия цикла.
+
+\item \textbf{0x00001202} $<$+117$>$: \texttt{83 fa 08 cmp edx,0x8}\\
+\textbf{Байт-код:} 83 fa 08\\
+Сравнение \texttt{i} с 8.
+
+\item \textbf{0x00001205} $<$+120$>$: \texttt{76 9f jbe 0x11a6 <main+25>}\\
+\textbf{Байт-код:} 76 9f\\
+Условный переход: если \texttt{i <= 8} (беззнаковое сравнение), продолжить цикл. Условие \texttt{i < 9} реализовано как \texttt{i <= 8}.
+
+\item \textbf{0x00001207} $<$+122$>$: \texttt{90 nop}\\
+\textbf{Байт-код:} 90\\
+Пустая операция для выравнивания.
+
+\item \textbf{0x00001208} $<$+123$>$: \texttt{90 nop}\\
+\textbf{Байт-код:} 90\\
+Пустая операция для выравнивания.
+
+\item \textbf{0x00001209} $<$+124$>$: \texttt{5d pop ebp}\\
+\textbf{Байт-код:} 5d\\
+Восстановление указателя базы стека предыдущей функции.
+
+\item \textbf{0x0000120a} $<$+125$>$: \texttt{c3 ret}\\
+\textbf{Байт-код:} c3\\
+Возврат из функции.
+
+\end{itemize}
+
+\section{Разбор двоичного кода команд}
+
+\subsection{Команда mov DWORD PTR [eax+0x8c],0x0 (адрес 119a)}
+
+Машинный код: \texttt{c7 80 8c 00 00 00 00 00 00 00}
+
+\begin{itemize}
+    \item \texttt{c7} --- опкод MOV для записи непосредственного значения в память (r/m32, imm32)
+    \item \texttt{80} --- байт ModR/M: Mod=10 (смещение 32 бита), Reg=000, R/M=000 (EAX)
+    \item \texttt{8c 00 00 00} --- смещение 0x0000008c (little-endian)
+    \item \texttt{00 00 00 00} --- непосредственное значение 0
+\end{itemize}
+
+\subsection{Команда mov DWORD PTR [eax+edx*4+0x64],ecx (адрес 11c9)}
+
+Машинный код: \texttt{89 8c 90 64 00 00 00}
+
+\begin{itemize}
+    \item \texttt{89} --- опкод MOV (r/m32, r32)
+    \item \texttt{8c} --- байт ModR/M: Mod=10 (смещение 32 бита), Reg=001 (ECX), R/M=100 (SIB follows)
+    \item \texttt{90} --- байт SIB: Scale=10 (*4), Index=010 (EDX), Base=000 (EAX)
+    \item \texttt{64 00 00 00} --- смещение 0x00000064 (little-endian)
+\end{itemize}
+
+\subsection{Команда jbe 11a6 (адрес 1205)}
+
+Машинный код: \texttt{76 9f}
+
+\begin{itemize}
+    \item \texttt{76} --- опкод JBE (короткий переход)
+    \item \texttt{9f} --- относительное смещение (-97 в дополнительном коде)
+\end{itemize}
+
+Вычисление адреса перехода: 0x1207 + 0xFFFFFF9F = 0x1207 - 0x61 = 0x11a6
+\begin{itemize}
+    \item Команда push ebp (адрес 118d)
+    \begin{itemize}
+        \item Машинный код: 55
+
+        \item 55 — опкод PUSH для регистра EBP. Опкоды 50-57 кодируют push для регистров EAX-EDI соответственно (50+5=55 для EBP)
+    \end{itemize}
+
+    \item Команда call 120b (адрес 1190)
+    \begin{itemize}
+        \item Машинный код: e8 76 00 00 00
+
+        \item e8 — опкод CALL с относительным 32-битным смещением
+        \item 76 00 00 00 — смещение 0x00000076
+    \end{itemize}
+
+    \item Команда add eax,0x2e47 (адрес 1195)
+    \begin{itemize}
+        \item Машинный код: 05 47 2e 00 00
+        \item 05 — опкод ADD для пары (EAX)
+        \item 47 2e 00 00 — значение 0x00002e47
+    \end{itemize}
+
+    \item Команда shl ecx,0x4 (адрес 11b9)
+    \begin{itemize}
+        \item Машинный код: c1 e1 04
+
+        \item c1 — опкод для групповых сдвигов
+        \item e1 (11100001) — 11 (регистр-операнд), 100 (код операции SHL), 001 (ECX)
+        \item 04 — величина сдвига (4 бита)
+    \end{itemize}
+
+    \item Команда and ecx,0xe (адрес 11c6)
+    \begin{itemize}
+        \item Машинный код: 83 e1 0e
+
+        \item 83 — опкод для групповых операций
+        \item e1 — байт ModR/M 11 (регистр-операнд), 100 (код операции), 001 (ECX)
+        \item 0e — 0x0E маска
+    \end{itemize}
+
+    \item Команда imul edx,edx,0x1a (адрес 11d8)
+    \begin{itemize}
+        \item Машинный код: 6b d2 1a
+
+    \item 6b — опкод (трёхоперандное умножение с 8-битным множителем)
+    \item d2 (11010010) — 11 (регистр-операнд), 010 (приёмник), 010 (источник)
+    \item 1a — множитель 0x1A (26)
+    \end{itemize}
+
+    \item Команда shr ecx,0x2 (адрес 11dd)
+    \begin{itemize}
+        \item Машинный код: c1 e9 02
+
+        \item c1 — опкод для групповых сдвигов r/m32 на imm8
+        \item e9 (11101001) 11 (регистр-операнд), 101 (код операции SHR), 001 (ECX)
+        \item 02 — величина сдвига (2 бита, эквивалент деления на 4)
+        
+    \end{itemize}
+    \item Команда ret (адрес 120a)
+    \begin{itemize}
+        \item Машинный код: c3
+        \item c3 — опкод RET. Извлекает адрес возврата из стека.
+    \end{itemize}
+\end{itemize}
+
+\section{Анализ переменных программы}
+
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+\textbf{Переменная} & \textbf{Тип} & \textbf{Размер} & \textbf{Объявление} & \textbf{Расположение} \\
+\hline
+\texttt{i} & unsigned long & 4 байта & глобально & \texttt{[eax+0x8c]} \\
+\hline
+\texttt{cMas[10]} & int[10] & 40 байт & глобально & \texttt{[eax+0x64]} \\
+\hline
+\end{tabular}
+
+\section{Карта памяти переменных}
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Адрес (смещение)} & \textbf{Переменная} & \textbf{Размер} & \textbf{Тип} \\
+\hline
+\texttt{[eax+0x64]} & \texttt{cMas[0]} & 4 байта & int \\
+\hline
+\texttt{[eax+0x68]} & \texttt{cMas[1]} & 4 байта & int \\
+\hline
+\texttt{[eax+0x6c]} & \texttt{cMas[2]} & 4 байта & int \\
+\hline
+\texttt{[eax+0x70]} & \texttt{cMas[3]} & 4 байта & int \\
+\hline
+\texttt{[eax+0x74]} & \texttt{cMas[4]} & 4 байта & int \\
+\hline
+\texttt{[eax+0x78]} & \texttt{cMas[5]} & 4 байта & int \\
+\hline
+\texttt{[eax+0x7c]} & \texttt{cMas[6]} & 4 байта & int \\
+\hline
+\texttt{[eax+0x80]} & \texttt{cMas[7]} & 4 байта & int \\
+\hline
+\texttt{[eax+0x84]} & \texttt{cMas[8]} & 4 байта & int \\
+\hline
+\texttt{[eax+0x88]} & \texttt{cMas[9]} & 4 байта & int \\
+\hline
+\texttt{[eax+0x8c]} & \texttt{i} & 4 байта & unsigned long \\
+\hline
+\end{tabular}
+
+\subsection{Используемые способы адресации}
+
+\begin{enumerate}
+    \item \textbf{Непосредственная адресация} --- операнд задан в команде:
+    \begin{itemize}
+        \item \texttt{add edx,0x1} --- константа 1
+        \item \texttt{cmp edx,0x6} --- константа 6
+        \item \texttt{and ecx,0xe} --- маска 0x0E
+    \end{itemize}
+    
+    \item \textbf{Регистровая адресация} --- операнд в регистре:
+    \begin{itemize}
+        \item \texttt{mov ecx,edx} --- оба операнда в регистрах
+        \item \texttt{add edx,ecx} --- сложение регистров
+    \end{itemize}
+    
+    \item \textbf{Базовая со смещением} --- для доступа к переменной \texttt{i}:
+    \begin{itemize}
+        \item \texttt{mov edx,[eax+0x8c]} --- база EAX, смещение 0x8c
+        \item Формула: EA = EAX + 0x8c
+    \end{itemize}
+    
+    \item \textbf{Многокомпонентная} --- для доступа к \texttt{cMas[i]}:
+    \begin{itemize}
+        \item \texttt{mov [eax+edx*4+0x64],ecx}
+        \item Формула: EA = EAX + EDX*4 + 0x64
+        \item EAX --- база (адрес глобальных данных)
+        \item EDX --- индекс (значение \texttt{i})
+        \item 4 --- масштаб (размер элемента int)
+        \item 0x64 --- смещение массива
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Адресация в командах перехода}
+
+\begin{itemize}
+    \item \textbf{Относительная короткая} (\texttt{jmp}, \texttt{je}, \texttt{jbe}): смещение 8 бит от адреса следующей команды
+    \item Пример: \texttt{jbe 11a6} (код \texttt{76 9f}) --- переход назад на 97 байт
+\end{itemize}
+
+\section{Версия с указателем}
+
+\subsection{Исходный код с указателем}
+
+\begin{lstlisting}[language=C, numbers=left, caption=Исходный код с указателем]
+int cMas[10];
+unsigned long i;
+
+void main() {
+    int *p = cMas;
+    for (i = 0; i < 9; i++) {
+        if (i != 6)
+            *(p + i) = (17 * i) & 0x0E;
+        else
+            *(p + i) = 0x1A * i / 4;
+    }
+}
+\end{lstlisting}
+
+\subsection{Дизассемблированный код версии с указателем}
+
+\begin{lstlisting}[language={[x86masm]Assembler}, numbers=left, caption=Дизассемблированный код с указателем]
+0000118d <main>:
+    118d:   55                      push   ebp
+    118e:   89 e5                   mov    ebp,esp
+    1190:   53                      push   ebx
+    1191:   83 ec 10                sub    esp,0x10
+    1194:   e8 90 00 00 00          call   1229 <__x86.get_pc_thunk.ax>
+    1199:   05 43 2e 00 00          add    eax,0x2e43
+    119e:   8d 90 64 00 00 00       lea    edx,[eax+0x64]
+    11a4:   89 55 f8                mov    DWORD PTR [ebp-0x8],edx
+    11a7:   c7 80 8c 00 00 00 00    mov    DWORD PTR [eax+0x8c],0x0
+    11ae:   00 00 00 
+    11b1:   eb 64                   jmp    1217 <main+0x8a>
+    11b3:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    11b9:   83 fa 06                cmp    edx,0x6
+    11bc:   74 28                   je     11e6 <main+0x59>
+    11be:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    11c4:   89 d1                   mov    ecx,edx
+    11c6:   c1 e1 04                shl    ecx,0x4
+    11c9:   01 ca                   add    edx,ecx
+    11cb:   89 d1                   mov    ecx,edx
+    11cd:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    11d3:   8d 1c 95 00 00 00 00    lea    ebx,[edx*4+0x0]
+    11da:   8b 55 f8                mov    edx,DWORD PTR [ebp-0x8]
+    11dd:   01 da                   add    edx,ebx
+    11df:   83 e1 0e                and    ecx,0xe
+    11e2:   89 0a                   mov    DWORD PTR [edx],ecx
+    11e4:   eb 22                   jmp    1208 <main+0x7b>
+    11e6:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    11ec:   6b d2 1a                imul   edx,edx,0x1a
+    11ef:   89 d1                   mov    ecx,edx
+    11f1:   c1 e9 02                shr    ecx,0x2
+    11f4:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    11fa:   8d 1c 95 00 00 00 00    lea    ebx,[edx*4+0x0]
+    1201:   8b 55 f8                mov    edx,DWORD PTR [ebp-0x8]
+    1204:   01 da                   add    edx,ebx
+    1206:   89 0a                   mov    DWORD PTR [edx],ecx
+    1208:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    120e:   83 c2 01                add    edx,0x1
+    1211:   89 90 8c 00 00 00       mov    DWORD PTR [eax+0x8c],edx
+    1217:   8b 90 8c 00 00 00       mov    edx,DWORD PTR [eax+0x8c]
+    121d:   83 fa 08                cmp    edx,0x8
+    1220:   76 91                   jbe    11b3 <main+0x26>
+    1222:   90                      nop
+    1223:   90                      nop
+    1224:   8b 5d fc                mov    ebx,DWORD PTR [ebp-0x4]
+    1227:   c9                      leave
+    1228:   c3                      ret
+\end{lstlisting}
+
+\subsection{Анализ изменений при переходе на указатель}
+
+\subsubsection{Новые инструкции в прологе}
+
+\begin{lstlisting}[language={[x86masm]Assembler}, caption=Инициализация указателя p]
+    1190:   53                      push   ebx
+    1191:   83 ec 10                sub    esp,0x10
+    ...
+    119e:   8d 90 64 00 00 00       lea    edx,[eax+0x64]
+    11a4:   89 55 f8                mov    DWORD PTR [ebp-0x8],edx
+\end{lstlisting}
+
+\begin{itemize}
+    \item \texttt{push ebx} --- сохранение регистра EBX (будет использоваться для вычислений)
+    \item \texttt{sub esp,0x10} --- выделение 16 байт в стеке для локальных переменных
+    \item \texttt{lea edx,[eax+0x64]} --- загрузка адреса массива \texttt{cMas} в EDX
+    \item \texttt{mov [ebp-0x8],edx} --- сохранение указателя \texttt{p} в локальную переменную на стеке
+\end{itemize}
+
+\subsubsection{Изменения в обращении к элементам массива}
+
+\textbf{Версия с индексом} (одна команда с многокомпонентной адресацией):
+\begin{lstlisting}[language={[x86masm]Assembler}, caption=Обращение через индекс]
+    mov    DWORD PTR [eax+edx*4+0x64],ecx    ; cMas[i] = ecx
+\end{lstlisting}
+
+\textbf{Версия с указателем} (несколько команд):
+\begin{lstlisting}[language={[x86masm]Assembler}, caption=Обращение через указатель]
+    11d3:   lea    ebx,[edx*4+0x0]       ; ebx = i * 4 (смещение в байтах)
+    11da:   mov    edx,DWORD PTR [ebp-0x8]  ; edx = p (загрузка указателя)
+    11dd:   add    edx,ebx               ; edx = p + i*4
+    ...
+    11e2:   mov    DWORD PTR [edx],ecx   ; *(p + i) = ecx
+\end{lstlisting}
+
+\subsubsection{Изменения в эпилоге}
+
+\begin{lstlisting}[language={[x86masm]Assembler}, caption=Эпилог версии с указателем]
+    1224:   8b 5d fc                mov    ebx,DWORD PTR [ebp-0x4]
+    1227:   c9                      leave
+    1228:   c3                      ret
+\end{lstlisting}
+
+Добавлено восстановление регистра EBX из стека перед возвратом.
+
+\subsection{Сравнение способов адресации}
+
+\begin{enumerate}
+    \item При использовании указателя компилятор создаёт \textbf{локальную переменную} в стеке для хранения адреса массива.
+    
+    \item Обращение через указатель требует \textbf{больше инструкций}: вычисление смещения (\texttt{lea}), загрузка указателя из стека (\texttt{mov}), сложение (\texttt{add}), и только потом запись (\texttt{mov}).
+    
+    \item Версия с индексом использует \textbf{многокомпонентную адресацию} x86 (база + индекс*масштаб + смещение) в одной команде, что эффективнее.
+    
+    \item Версия с указателем использует \textbf{косвенно-регистровую адресацию} \texttt{[edx]} после предварительного вычисления адреса.
+    
+    \item Код с указателем на \textbf{30 байт больше} (156 против 126 байт) и требует дополнительный регистр (EBX).
+\end{enumerate}
+\section{Выводы}
+
+В ходе выполнения лабораторной работы были изучены:
+
+\begin{enumerate}
+    \item Система команд x86 в 32-битном режиме и их кодирование
+    \item Способы адресации: непосредственная, регистровая, базовая со смещением, многокомпонентная
+    \item Оптимизации компилятора: замена умножения на сдвиги и сложения, замена деления на сдвиги
+    \item Организация доступа к глобальным переменным
+    \item Различия в генерируемом коде при использовании индексации массива и указателей
+\end{enumerate}
+
+Компилятор эффективно использует возможности архитектуры, применяя многокомпонентную адресацию для доступа к элементам массива и оптимизируя арифметические операции.

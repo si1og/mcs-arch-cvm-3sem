@@ -1,0 +1,468 @@
+\section{Цель работы}
+
+Изучить организацию вызова подпрограмм в архитектуре x86-32: механизм передачи параметров через стек, соглашение о вызовах (calling convention), размещение локальных переменных и возврат значений из функций.
+
+\section{Задание}
+
+Вариант 14: \texttt{unsigned char Fn(char, char, unsigned char)}
+
+В функции объявить и использовать локальную переменную типа \texttt{char}.
+
+\section{Исходный код программы}
+
+\begin{lstlisting}[language=C, numbers=left, caption=Исходный код программы (main.c)]
+unsigned char ucResult;
+char cA;
+
+unsigned char Fn(char, char, unsigned char);
+
+int main(void) {
+    cA = 'A';
+    ucResult = Fn(cA, 7, 25);
+    return 0;
+}
+
+unsigned char Fn(char cParam1, char cParam2, unsigned char ucParam3) {
+    char cLocal;
+    cLocal = cParam1 + cParam2;
+    return (unsigned char)((cLocal * ucParam3) / 10);
+}
+\end{lstlisting}
+
+\subsection{Описание переменных}
+
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Переменная} & \textbf{Тип} & \textbf{Размер} & \textbf{Область видимости} \\
+\hline
+\texttt{ucResult} & unsigned char & 1 байт & глобальная \\
+\hline
+\texttt{cA} & char & 1 байт & глобальная \\
+\hline
+\texttt{cParam1} & char & 1 байт & параметр функции \\
+\hline
+\texttt{cParam2} & char & 1 байт & параметр функции \\
+\hline
+\texttt{ucParam3} & unsigned char & 1 байт & параметр функции \\
+\hline
+\texttt{cLocal} & char & 1 байт & локальная в Fn \\
+\hline
+\end{tabular}
+
+\section{Дизассемблированный код}
+
+\subsection{Функция main}
+
+\begin{lstlisting}[language={[x86masm]Assembler}, numbers=left, caption=Дизассемблированный код функции main]
+0000118d <main>:
+    118d:   8d 4c 24 04             lea    ecx,[esp+0x4]
+    1191:   83 e4 f0                and    esp,0xfffffff0
+    1194:   ff 71 fc                push   DWORD PTR [ecx-0x4]
+    1197:   55                      push   ebp
+    1198:   89 e5                   mov    ebp,esp
+    119a:   53                      push   ebx
+    119b:   51                      push   ecx
+    119c:   e8 ef fe ff ff          call   1090 <__x86.get_pc_thunk.bx>
+    11a1:   81 c3 3b 2e 00 00       add    ebx,0x2e3b
+    11a7:   c6 83 2e 00 00 00 41    mov    BYTE PTR [ebx+0x2e],0x41
+    11ae:   0f b6 83 2e 00 00 00    movzx  eax,BYTE PTR [ebx+0x2e]
+    11b5:   0f be c0                movsx  eax,al
+    11b8:   83 ec 04                sub    esp,0x4
+    11bb:   6a 19                   push   0x19
+    11bd:   6a 07                   push   0x7
+    11bf:   50                      push   eax
+    11c0:   e8 18 00 00 00          call   11dd <Fn>
+    11c5:   83 c4 10                add    esp,0x10
+    11c8:   88 83 2d 00 00 00       mov    BYTE PTR [ebx+0x2d],al
+    11ce:   b8 00 00 00 00          mov    eax,0x0
+    11d3:   8d 65 f8                lea    esp,[ebp-0x8]
+    11d6:   59                      pop    ecx
+    11d7:   5b                      pop    ebx
+    11d8:   5d                      pop    ebp
+    11d9:   8d 61 fc                lea    esp,[ecx-0x4]
+    11dc:   c3                      ret
+\end{lstlisting}
+
+\subsection{Функция Fn}
+
+\begin{lstlisting}[language={[x86masm]Assembler}, numbers=left, caption=Дизассемблированный код функции Fn]
+000011dd <Fn>:
+    11dd:   55                      push   ebp
+    11de:   89 e5                   mov    ebp,esp
+    11e0:   83 ec 1c                sub    esp,0x1c
+    11e3:   e8 48 00 00 00          call   1230 <__x86.get_pc_thunk.ax>
+    11e8:   05 f4 2d 00 00          add    eax,0x2df4
+    11ed:   8b 4d 08                mov    ecx,DWORD PTR [ebp+0x8]
+    11f0:   8b 55 0c                mov    edx,DWORD PTR [ebp+0xc]
+    11f3:   8b 45 10                mov    eax,DWORD PTR [ebp+0x10]
+    11f6:   88 4d ec                mov    BYTE PTR [ebp-0x14],cl
+    11f9:   88 55 e8                mov    BYTE PTR [ebp-0x18],dl
+    11fc:   88 45 e4                mov    BYTE PTR [ebp-0x1c],al
+    11ff:   0f b6 55 ec             movzx  edx,BYTE PTR [ebp-0x14]
+    1203:   0f b6 45 e8             movzx  eax,BYTE PTR [ebp-0x18]
+    1207:   01 d0                   add    eax,edx
+    1209:   88 45 ff                mov    BYTE PTR [ebp-0x1],al
+    120c:   0f be 55 ff             movsx  edx,BYTE PTR [ebp-0x1]
+    1210:   0f b6 45 e4             movzx  eax,BYTE PTR [ebp-0x1c]
+    1214:   89 d1                   mov    ecx,edx
+    1216:   0f af c8                imul   ecx,eax
+    1219:   ba 67 66 66 66          mov    edx,0x66666667
+    121e:   89 c8                   mov    eax,ecx
+    1220:   f7 ea                   imul   edx
+    1222:   89 d0                   mov    eax,edx
+    1224:   c1 f8 02                sar    eax,0x2
+    1227:   c1 f9 1f                sar    ecx,0x1f
+    122a:   89 ca                   mov    edx,ecx
+    122c:   29 d0                   sub    eax,edx
+    122e:   c9                      leave
+    122f:   c3                      ret
+\end{lstlisting}
+
+\section{Разбор дизассемблера по байтам}
+
+\subsection{Функция main}
+
+\begin{itemize}
+
+\item \textbf{0x0000118d} $<$+0$>$: \texttt{8d 4c 24 04 lea ecx,[esp+0x4]}\\
+\textbf{Байт-код:} 8d 4c 24 04\\
+Сохранение адреса аргументов командной строки в ECX для последующего выравнивания стека.
+
+\item \textbf{0x00001191} $<$+4$>$: \texttt{83 e4 f0 and esp,0xfffffff0}\\
+\textbf{Байт-код:} 83 e4 f0\\
+Выравнивание стека по границе 16 байт (требование ABI).
+
+\item \textbf{0x00001194} $<$+7$>$: \texttt{ff 71 fc push DWORD PTR [ecx-0x4]}\\
+\textbf{Байт-код:} ff 71 fc\\
+Сохранение адреса возврата в выровненный стек.
+
+\item \textbf{0x00001197} $<$+10$>$: \texttt{55 push ebp}\\
+\textbf{Байт-код:} 55\\
+Сохранение базового указателя вызывающей функции.
+
+\item \textbf{0x00001198} $<$+11$>$: \texttt{89 e5 mov ebp,esp}\\
+\textbf{Байт-код:} 89 e5\\
+Установка нового кадра стека.
+
+\item \textbf{0x0000119a} $<$+13$>$: \texttt{53 push ebx}\\
+\textbf{Байт-код:} 53\\
+Сохранение регистра EBX (callee-saved).
+
+\item \textbf{0x0000119b} $<$+14$>$: \texttt{51 push ecx}\\
+\textbf{Байт-код:} 51\\
+Сохранение ECX с адресом аргументов.
+
+\item \textbf{0x0000119c} $<$+15$>$: \texttt{e8 ef fe ff ff call 1090}\\
+\textbf{Байт-код:} e8 ef fe ff ff\\
+Вызов служебной функции для получения адреса в EBX (PIC).
+
+\item \textbf{0x000011a1} $<$+20$>$: \texttt{81 c3 3b 2e 00 00 add ebx,0x2e3b}\\
+\textbf{Байт-код:} 81 c3 3b 2e 00 00\\
+Вычисление базового адреса глобальных данных.
+
+\item \textbf{0x000011a7} $<$+26$>$: \texttt{c6 83 2e 00 00 00 41 mov BYTE PTR [ebx+0x2e],0x41}\\
+\textbf{Байт-код:} c6 83 2e 00 00 00 41\\
+Присваивание \texttt{cA = 'A'} (0x41 = 65 = 'A').
+
+\item \textbf{0x000011ae} $<$+33$>$: \texttt{0f b6 83 2e 00 00 00 movzx eax,BYTE PTR [ebx+0x2e]}\\
+\textbf{Байт-код:} 0f b6 83 2e 00 00 00\\
+Загрузка \texttt{cA} с нулевым расширением до 32 бит.
+
+\item \textbf{0x000011b5} $<$+40$>$: \texttt{0f be c0 movsx eax,al}\\
+\textbf{Байт-код:} 0f be c0\\
+Знаковое расширение для передачи как \texttt{char} (signed).
+
+\item \textbf{0x000011b8} $<$+43$>$: \texttt{83 ec 04 sub esp,0x4}\\
+\textbf{Байт-код:} 83 ec 04\\
+Выравнивание стека перед передачей параметров.
+
+\item \textbf{0x000011bb} $<$+46$>$: \texttt{6a 19 push 0x19}\\
+\textbf{Байт-код:} 6a 19\\
+Передача третьего параметра \texttt{ucParam3 = 25} (0x19).
+
+\item \textbf{0x000011bd} $<$+48$>$: \texttt{6a 07 push 0x7}\\
+\textbf{Байт-код:} 6a 07\\
+Передача второго параметра \texttt{cParam2 = 7}.
+
+\item \textbf{0x000011bf} $<$+50$>$: \texttt{50 push eax}\\
+\textbf{Байт-код:} 50\\
+Передача первого параметра \texttt{cParam1 = cA} ('A').
+
+\item \textbf{0x000011c0} $<$+51$>$: \texttt{e8 18 00 00 00 call 11dd}\\
+\textbf{Байт-код:} e8 18 00 00 00\\
+Вызов функции \texttt{Fn}.
+
+\item \textbf{0x000011c5} $<$+56$>$: \texttt{83 c4 10 add esp,0x10}\\
+\textbf{Байт-код:} 83 c4 10\\
+Очистка стека: 16 байт (3 параметра по 4 байта + 4 байта выравнивания).
+
+\item \textbf{0x000011c8} $<$+59$>$: \texttt{88 83 2d 00 00 00 mov BYTE PTR [ebx+0x2d],al}\\
+\textbf{Байт-код:} 88 83 2d 00 00 00\\
+Сохранение результата \texttt{ucResult = AL}.
+
+\item \textbf{0x000011ce} $<$+65$>$: \texttt{b8 00 00 00 00 mov eax,0x0}\\
+\textbf{Байт-код:} b8 00 00 00 00\\
+Возврат 0 из main (\texttt{return 0}).
+
+\item \textbf{0x000011d3} $<$+70$>$: \texttt{8d 65 f8 lea esp,[ebp-0x8]}\\
+\textbf{Байт-код:} 8d 65 f8\\
+Восстановление ESP для эпилога.
+
+\item \textbf{0x000011d6} $<$+73$>$: \texttt{59 pop ecx}\\
+\textbf{Байт-код:} 59\\
+Восстановление ECX.
+
+\item \textbf{0x000011d7} $<$+74$>$: \texttt{5b pop ebx}\\
+\textbf{Байт-код:} 5b\\
+Восстановление EBX.
+
+\item \textbf{0x000011d8} $<$+75$>$: \texttt{5d pop ebp}\\
+\textbf{Байт-код:} 5d\\
+Восстановление EBP.
+
+\item \textbf{0x000011d9} $<$+76$>$: \texttt{8d 61 fc lea esp,[ecx-0x4]}\\
+\textbf{Байт-код:} 8d 61 fc\\
+Восстановление оригинального ESP.
+
+\item \textbf{0x000011dc} $<$+79$>$: \texttt{c3 ret}\\
+\textbf{Байт-код:} c3\\
+Возврат из функции main.
+
+\end{itemize}
+
+\subsection{Функция Fn}
+
+\begin{itemize}
+
+\item \textbf{0x000011dd} $<$+0$>$: \texttt{55 push ebp}\\
+\textbf{Байт-код:} 55\\
+Сохранение базового указателя вызывающей функции.
+
+\item \textbf{0x000011de} $<$+1$>$: \texttt{89 e5 mov ebp,esp}\\
+\textbf{Байт-код:} 89 e5\\
+Установка нового кадра стека.
+
+\item \textbf{0x000011e0} $<$+3$>$: \texttt{83 ec 1c sub esp,0x1c}\\
+\textbf{Байт-код:} 83 ec 1c\\
+Выделение 28 байт для локальных переменных.
+
+\item \textbf{0x000011e3} $<$+6$>$: \texttt{e8 48 00 00 00 call 1230}\\
+\textbf{Байт-код:} e8 48 00 00 00\\
+Вызов служебной функции для PIC (получение адреса в EAX).
+
+\item \textbf{0x000011e8} $<$+11$>$: \texttt{05 f4 2d 00 00 add eax,0x2df4}\\
+\textbf{Байт-код:} 05 f4 2d 00 00\\
+Вычисление базового адреса глобальных данных.
+
+\item \textbf{0x000011ed} $<$+16$>$: \texttt{8b 4d 08 mov ecx,DWORD PTR [ebp+0x8]}\\
+\textbf{Байт-код:} 8b 4d 08\\
+Загрузка первого параметра \texttt{cParam1} в ECX.
+
+\item \textbf{0x000011f0} $<$+19$>$: \texttt{8b 55 0c mov edx,DWORD PTR [ebp+0xc]}\\
+\textbf{Байт-код:} 8b 55 0c\\
+Загрузка второго параметра \texttt{cParam2} в EDX.
+
+\item \textbf{0x000011f3} $<$+22$>$: \texttt{8b 45 10 mov eax,DWORD PTR [ebp+0x10]}\\
+\textbf{Байт-код:} 8b 45 10\\
+Загрузка третьего параметра \texttt{ucParam3} в EAX.
+
+\item \textbf{0x000011f6} $<$+25$>$: \texttt{88 4d ec mov BYTE PTR [ebp-0x14],cl}\\
+\textbf{Байт-код:} 88 4d ec\\
+Сохранение \texttt{cParam1} в локальную область стека.
+
+\item \textbf{0x000011f9} $<$+28$>$: \texttt{88 55 e8 mov BYTE PTR [ebp-0x18],dl}\\
+\textbf{Байт-код:} 88 55 e8\\
+Сохранение \texttt{cParam2} в локальную область стека.
+
+\item \textbf{0x000011fc} $<$+31$>$: \texttt{88 45 e4 mov BYTE PTR [ebp-0x1c],al}\\
+\textbf{Байт-код:} 88 45 e4\\
+Сохранение \texttt{ucParam3} в локальную область стека.
+
+\item \textbf{0x000011ff} $<$+34$>$: \texttt{0f b6 55 ec movzx edx,BYTE PTR [ebp-0x14]}\\
+\textbf{Байт-код:} 0f b6 55 ec\\
+Загрузка \texttt{cParam1} с нулевым расширением.
+
+\item \textbf{0x00001203} $<$+38$>$: \texttt{0f b6 45 e8 movzx eax,BYTE PTR [ebp-0x18]}\\
+\textbf{Байт-код:} 0f b6 45 e8\\
+Загрузка \texttt{cParam2} с нулевым расширением.
+
+\item \textbf{0x00001207} $<$+42$>$: \texttt{01 d0 add eax,edx}\\
+\textbf{Байт-код:} 01 d0\\
+Вычисление \texttt{cParam1 + cParam2}.
+
+\item \textbf{0x00001209} $<$+44$>$: \texttt{88 45 ff mov BYTE PTR [ebp-0x1],al}\\
+\textbf{Байт-код:} 88 45 ff\\
+Сохранение результата в локальную переменную \texttt{cLocal}.
+
+\item \textbf{0x0000120c} $<$+47$>$: \texttt{0f be 55 ff movsx edx,BYTE PTR [ebp-0x1]}\\
+\textbf{Байт-код:} 0f be 55 ff\\
+Загрузка \texttt{cLocal} со знаковым расширением.
+
+\item \textbf{0x00001210} $<$+51$>$: \texttt{0f b6 45 e4 movzx eax,BYTE PTR [ebp-0x1c]}\\
+\textbf{Байт-код:} 0f b6 45 e4\\
+Загрузка \texttt{ucParam3} с нулевым расширением (unsigned).
+
+\item \textbf{0x00001214} $<$+55$>$: \texttt{89 d1 mov ecx,edx}\\
+\textbf{Байт-код:} 89 d1\\
+Копирование \texttt{cLocal} в ECX.
+
+\item \textbf{0x00001216} $<$+57$>$: \texttt{0f af c8 imul ecx,eax}\\
+\textbf{Байт-код:} 0f af c8\\
+Умножение: \texttt{ecx = cLocal * ucParam3}.
+
+\item \textbf{0x00001219} $<$+60$>$: \texttt{ba 67 66 66 66 mov edx,0x66666667}\\
+\textbf{Байт-код:} ba 67 66 66 66\\
+Загрузка магической константы для деления на 10.
+
+\item \textbf{0x0000121e} $<$+65$>$: \texttt{89 c8 mov eax,ecx}\\
+\textbf{Байт-код:} 89 c8\\
+Копирование произведения в EAX для деления.
+
+\item \textbf{0x00001220} $<$+67$>$: \texttt{f7 ea imul edx}\\
+\textbf{Байт-код:} f7 ea\\
+Знаковое умножение EAX на EDX, результат в EDX:EAX.
+
+\item \textbf{0x00001222} $<$+69$>$: \texttt{89 d0 mov eax,edx}\\
+\textbf{Байт-код:} 89 d0\\
+Старшая часть результата (EDX) --- это результат деления.
+
+\item \textbf{0x00001224} $<$+71$>$: \texttt{c1 f8 02 sar eax,0x2}\\
+\textbf{Байт-код:} c1 f8 02\\
+Арифметический сдвиг вправо на 2 (корректировка деления).
+
+\item \textbf{0x00001227} $<$+74$>$: \texttt{c1 f9 1f sar ecx,0x1f}\\
+\textbf{Байт-код:} c1 f9 1f\\
+Получение знакового бита исходного числа.
+
+\item \textbf{0x0000122a} $<$+77$>$: \texttt{89 ca mov edx,ecx}\\
+\textbf{Байт-код:} 89 ca\\
+Копирование знакового бита в EDX.
+
+\item \textbf{0x0000122c} $<$+79$>$: \texttt{29 d0 sub eax,edx}\\
+\textbf{Байт-код:} 29 d0\\
+Корректировка для отрицательных чисел (добавление 1 если отрицательное).
+
+\item \textbf{0x0000122e} $<$+81$>$: \texttt{c9 leave}\\
+\textbf{Байт-код:} c9\\
+Восстановление ESP и EBP (эквивалент mov esp,ebp; pop ebp).
+
+\item \textbf{0x0000122f} $<$+82$>$: \texttt{c3 ret}\\
+\textbf{Байт-код:} c3\\
+Возврат из функции. Результат в AL (младший байт EAX).
+
+\end{itemize}
+
+\section{Анализ организации подпрограммы}
+
+\subsection{Соглашение о вызовах (cdecl)}
+
+В архитектуре x86-32 используется соглашение cdecl:
+\begin{itemize}
+    \item Параметры передаются через стек справа налево
+    \item Вызывающая функция очищает стек после вызова
+    \item Возвращаемое значение помещается в регистр EAX (AL для char)
+    \item Регистры EAX, ECX, EDX могут изменяться вызываемой функцией
+    \item Регистры EBX, ESI, EDI, EBP должны сохраняться
+\end{itemize}
+
+\subsection{Схема передачи параметров}
+
+При вызове \texttt{Fn(cA, 7, 25)} параметры помещаются в стек в обратном порядке:
+
+\begin{lstlisting}[language={[x86masm]Assembler}, caption=Передача параметров в main]
+    sub    esp,0x4         ; выравнивание стека
+    push   0x19            ; ucParam3 = 25 (третий параметр)
+    push   0x7             ; cParam2 = 7 (второй параметр)  
+    push   eax             ; cParam1 = cA (первый параметр)
+    call   11dd <Fn>
+    add    esp,0x10        ; очистка стека (16 байт)
+\end{lstlisting}
+
+\subsection{Карта стека функции main}
+
+\begin{tabular}{|c|l|l|}
+\hline
+\textbf{Адрес} & \textbf{Содержимое} & \textbf{Описание} \\
+\hline
+\texttt{[ebp+0x4]} & адрес возврата & 4 байта \\
+\hline
+\texttt{[ebp]} & сохранённый EBP & 4 байта \\
+\hline
+\texttt{[ebp-0x4]} & сохранённый EBX & 4 байта \\
+\hline
+\texttt{[ebp-0x8]} & сохранённый ECX & 4 байта \\
+\hline
+\end{tabular}
+
+\subsection{Карта стека функции Fn}
+
+\begin{tabular}{|c|l|l|}
+\hline
+\textbf{Адрес} & \textbf{Содержимое} & \textbf{Размер} \\
+\hline
+\texttt{[ebp+0x10]} & ucParam3 (третий параметр) & 4 байта \\
+\hline
+\texttt{[ebp+0xc]} & cParam2 (второй параметр) & 4 байта \\
+\hline
+\texttt{[ebp+0x8]} & cParam1 (первый параметр) & 4 байта \\
+\hline
+\texttt{[ebp+0x4]} & адрес возврата & 4 байта \\
+\hline
+\texttt{[ebp]} & сохранённый EBP & 4 байта \\
+\hline
+\texttt{[ebp-0x1]} & cLocal (локальная переменная) & 1 байт \\
+\hline
+\texttt{[ebp-0x14]} & копия cParam1 & 1 байт \\
+\hline
+\texttt{[ebp-0x18]} & копия cParam2 & 1 байт \\
+\hline
+\texttt{[ebp-0x1c]} & копия ucParam3 & 1 байт \\
+\hline
+\end{tabular}
+
+\subsection{Карта глобальных переменных}
+
+\begin{tabular}{|c|l|l|}
+\hline
+\textbf{Адрес} & \textbf{Переменная} & \textbf{Тип} \\
+\hline
+\texttt{[ebx+0x2d]} & ucResult & unsigned char \\
+\hline
+\texttt{[ebx+0x2e]} & cA & char \\
+\hline
+\end{tabular}
+
+\subsection{Возврат значения}
+
+Функция возвращает \texttt{unsigned char} через регистр AL (младший байт EAX). Результат сохраняется в main:
+\begin{lstlisting}[language={[x86masm]Assembler}, caption=Сохранение результата]
+    mov    BYTE PTR [ebx+0x2d],al    ; ucResult = AL
+\end{lstlisting}
+
+\subsection{Расширение типов}
+
+\begin{itemize}
+    \item \texttt{movzx} --- нулевое расширение (для unsigned char)
+    \item \texttt{movsx} --- знаковое расширение (для char)
+\end{itemize}
+
+Пример: при загрузке \texttt{cA} для передачи как \texttt{char}:
+\begin{lstlisting}[language={[x86masm]Assembler}, caption=Расширение типа char]
+    movzx  eax,BYTE PTR [ebx+0x2e]   ; нулевое расширение
+    movsx  eax,al                     ; знаковое расширение
+\end{lstlisting}
+
+\section{Выводы}
+
+В ходе выполнения лабораторной работы изучены:
+
+\begin{enumerate}
+    \item Механизм передачи параметров через стек по соглашению cdecl
+    \item Организация кадра стека (stack frame) с использованием EBP
+    \item Размещение локальных переменных в стеке относительно EBP
+    \item Способы адресации для доступа к параметрам и локальным переменным
+    \item Возврат значений через регистр EAX/AL
+    \item Расширение типов при передаче параметров меньше 32 бит
+\end{enumerate}
+
+Параметры типа \texttt{char} и \texttt{unsigned char} при передаче через стек расширяются до 32 бит (4 байта) для выравнивания стека.
